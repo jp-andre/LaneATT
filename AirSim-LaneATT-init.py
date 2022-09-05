@@ -24,10 +24,12 @@ sys.path.append(".")
 importlib.invalidate_caches()
 
 # 3. Load LaneATT module and model
-from utils.viz import load_model, img2tensor, filter_good_lanes, draw_lane, infer
+from utils.viz import load_model
 model, device = load_model(pt_filename)
 
 global shared_objects
-shared_objects = {}
+shared_objects = {
+    "model": model
+}
 
 print(f"Initialization of LaneATT completed!")
