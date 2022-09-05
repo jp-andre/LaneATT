@@ -1,8 +1,10 @@
 # For quick testing
 
+## Warning: **CUDA is required, macOS is not supported!**
+
 To run inference on a single image:
 ```
-PYTHONPATH=. python utils/viz.py --image datasets/tusimple-test/clips/0531/1492628912583733966/10.jpg
+PYTHONPATH=. python utils/viz.py --image image.jpg
 ```
 
 # Installation
