@@ -1,12 +1,13 @@
 import argparse
 
+import os
 import cv2
 import torch
-import random
 import numpy as np
 import torchvision.transforms as transforms
 
 from lib.config import Config
+from lib.models.laneatt import LaneATT
 
 GT_COLOR = (255, 0, 0)
 PRED_HIT_COLOR = (0, 255, 0)
@@ -17,7 +18,6 @@ IMAGENET_STD = np.array([0.229, 0.224, 0.225])
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Visualize a dataset")
-    parser.add_argument("--cfg", help="Config file")
     parser.add_argument("--image", required=True)
     args = parser.parse_args()
 
@@ -67,7 +67,7 @@ def filter_good_lanes(lanes, tolerance=0.05):
     start_positions = np.array([-1])
 
     for lane in lanes[0][:MAX_CANDIDATES]:
-        startx = lane.points[0,0]
+        startx = lane.points[0, 0]
         diffs = np.abs(start_positions - startx) > tolerance
         if np.all(diffs):
             print("Found new lane starting at", lane.points[0])
@@ -77,22 +77,44 @@ def filter_good_lanes(lanes, tolerance=0.05):
     return good_lanes
 
 
-def main():
-    args = parse_args()
-    cfg = Config(args.cfg)
+def load_pretrained_weights(model_path = "model_0100.pt"):
+    if not os.path.exists(model_path):
+        print("Pretrained weights not found, downloading...")
+        url = "https://collimator-devops-resources.s3.us-west-2.amazonaws.com/ml-demos/LaneATT/model_0100.pt"
+        os.system("wget https://collimator-devops-resources.s3.us-west-2.amazonaws.com/ml-demos/LaneATT/model_0100.pt")
 
-    print("Loading inference model: LaneATT")
+    train_state = torch.load(model_path)
+    return train_state['model']
+
+def load_model():
+    print("Loading inference model: LaneATT (might require CUDA)")
 
     device = torch.device("cuda:0")
-    model = cfg.get_model()
 
-    model_path = "experiments/custom/models/model_0100.pt"
-    train_state = torch.load(model_path)
+    params = {
+        "backbone": "resnet34",
+        "S": 72,
+        "topk_anchors": 1000,
+        "anchors_freq_path": "data/tusimple_anchors_freq.pt",
+        "img_h": 360,
+        "img_w": 640,
+    }
 
-    model.load_state_dict(train_state["model"])
+    model = LaneATT(**params)
+
+    weights = load_pretrained_weights()
+    model.load_state_dict(weights)
     model = model.to(device)
     model.eval()
     print("Successfully loaded inference model")
+
+    return model, device
+
+
+def main():
+    args = parse_args()
+
+    model, device = load_model()
 
     image = cv2.imread(args.image)
     img = cv2.resize(image, (640, 360), interpolation=cv2.INTER_LINEAR)
