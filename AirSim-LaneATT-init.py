@@ -15,14 +15,16 @@ if not os.path.exists(cachefile):
 os.system(f"ln -sf {cachefile} {pt_filename}")
 
 # 2. Prepare code for LaneATT
-# os.system("curl -o LaneATT-main.zip https://github.com/jp-andre/LaneATT/archive/refs/heads/main.zip")
+if not os.path.exists("LaneATT-main.zip"):
+    os.system("curl -Lo LaneATT-main.zip https://github.com/jp-andre/LaneATT/archive/refs/heads/main.zip")
 os.system("unzip -qo LaneATT-main.zip && mv LaneATT-main/* .")
 os.system("pip install -r requirements.txt")
+os.system("cd lib/nms && pip install .")
 sys.path.append(".")
 importlib.invalidate_caches()
 
 # 3. Load LaneATT module and model
-from lib.viz import load_model, img2tensor, filter_good_lanes, draw_lane, infer
+from utils.viz import load_model, img2tensor, filter_good_lanes, draw_lane, infer
 model, device = load_model(pt_filename)
 
 global shared_objects
