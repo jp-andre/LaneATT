@@ -7,19 +7,13 @@ import numpy as np
 import torchvision.transforms as transforms
 import similaritymeasures
 
-from lib.config import Config
 from lib.models.laneatt import LaneATT
-
-GT_COLOR = (255, 0, 0)
-PRED_HIT_COLOR = (0, 255, 0)
-PRED_MISS_COLOR = (0, 0, 255)
-IMAGENET_MEAN = np.array([0.485, 0.456, 0.406])
-IMAGENET_STD = np.array([0.229, 0.224, 0.225])
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Visualize a dataset")
     parser.add_argument("--image", required=True)
+    parser.add_argument("--weights", default="model_0100.pt", required=False)
     args = parser.parse_args()
 
     return args
@@ -87,16 +81,16 @@ def filter_good_lanes(outputs, lanes, tolerance=0.05):
     return good_lanes
 
 
-def load_pretrained_weights(model_path = "model_0100.pt"):
-    if not os.path.exists(model_path):
+def load_pretrained_weights(weights_filename):
+    if not os.path.exists(weights_filename):
         print("Pretrained weights not found, downloading...")
-        url = "https://collimator-devops-resources.s3.us-west-2.amazonaws.com/ml-demos/LaneATT/model_0100.pt"
-        os.system("wget https://collimator-devops-resources.s3.us-west-2.amazonaws.com/ml-demos/LaneATT/model_0100.pt")
+        url = f"https://collimator-devops-resources.s3.us-west-2.amazonaws.com/ml-demos/LaneATT/{weights_filename}"
+        os.system(f"wget {url}")
 
-    train_state = torch.load(model_path)
+    train_state = torch.load(weights_filename)
     return train_state['model']
 
-def load_model():
+def load_model(weights_filename = "model_0100.pt"):
     print("Loading inference model: LaneATT (might require CUDA)")
 
     device = torch.device("cuda:0")
@@ -112,7 +106,7 @@ def load_model():
 
     model = LaneATT(**params)
 
-    weights = load_pretrained_weights()
+    weights = load_pretrained_weights(weights_filename)
     model.load_state_dict(weights)
     model = model.to(device)
     model.eval()
@@ -121,23 +115,28 @@ def load_model():
     return model, device
 
 
+def img2tensor(image):
+    img = cv2.resize(image, (640, 360), interpolation=cv2.INTER_LINEAR)
+    transform = transforms.ToTensor()
+    tensor = transform(img).unsqueeze(0)
+    return tensor
+
+
 def main():
     args = parse_args()
 
-    model, device = load_model()
+    model, device = load_model(args.weights)
 
     image = cv2.imread(args.image)
-    img = cv2.resize(image, (640, 360), interpolation=cv2.INTER_LINEAR)
-
-    transform = transforms.ToTensor()
-    tensor = transform(img).unsqueeze(0)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    tensor = img2tensor(image)
 
     outputs, lanes = infer(model, tensor, device)
     good_lanes = filter_good_lanes(outputs, lanes)
 
     for lane in good_lanes:
-        draw_lane(img, lane, 640, 360, color=(0, 255, 0))
-    cv2_showimage(img)
+        draw_lane(image, lane, 640, 360, color=(0, 255, 0))
+    cv2_showimage(image)
 
 
 if __name__ == "__main__":
