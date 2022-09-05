@@ -116,9 +116,8 @@ def load_model(weights_filename = "model_0100.pt"):
 
 
 def img2tensor(image):
-    img = cv2.resize(image, (640, 360), interpolation=cv2.INTER_LINEAR)
     transform = transforms.ToTensor()
-    tensor = transform(img).unsqueeze(0)
+    tensor = transform(image).unsqueeze(0)
     return tensor
 
 
@@ -128,7 +127,8 @@ def main():
     model, device = load_model(args.weights)
 
     image = cv2.imread(args.image)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = cv2.resize(image, (640, 360), interpolation=cv2.INTER_LINEAR)
+    # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     tensor = img2tensor(image)
 
     outputs, lanes = infer(model, tensor, device)
