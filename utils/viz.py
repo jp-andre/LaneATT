@@ -5,6 +5,7 @@ import cv2
 import torch
 import numpy as np
 import torchvision.transforms as transforms
+import similaritymeasures
 
 from lib.config import Config
 from lib.models.laneatt import LaneATT
@@ -60,22 +61,28 @@ def draw_lane(img, lane, w, h, color=(0, 255, 0)):
         cv2.line(img, (x1, y1), (x2, y2), color=color, thickness=2)
 
 
-def filter_good_lanes(lanes, tolerance=0.05):
+def filter_good_lanes(outputs, lanes, tolerance=0.05):
     MAX_CANDIDATES = 20
     good_lanes = []
-    tolerance = 0.05
-    start_positions = np.array([-1])
+    tolerance = 0.1
 
-    # Look for lanes that are distinct enough (more than 5% width apart)
+    # Look for lanes that are distinct enough
     # in the first few candidates (the highest probability of being lanes)
-    for lane in lanes[0][:MAX_CANDIDATES]:
-        points = lane.points
-        startx = points[0, 0]
-        diffs = np.abs(start_positions - startx) > tolerance
-        if np.all(diffs):
-            print("Found new lane starting at", points[0])
+    for k in range(MAX_CANDIDATES):
+        lane = lanes[0][k]
+
+        skip = False
+        for cmp in good_lanes:
+            p1 = cmp.points[:20]
+            p2 = lane.points[:20]
+            dist = similaritymeasures.area_between_two_curves(p1, p2)
+            if dist < tolerance*tolerance:
+                skip = True
+                break
+
+        if not skip:
+            print("Found new lane starting at", lane.points[0])
             good_lanes.append(lane)
-            start_positions = np.append(start_positions, startx)
 
     return good_lanes
 
@@ -125,8 +132,8 @@ def main():
     transform = transforms.ToTensor()
     tensor = transform(img).unsqueeze(0)
 
-    _, lanes = infer(model, tensor, device)
-    good_lanes = filter_good_lanes(lanes)
+    outputs, lanes = infer(model, tensor, device)
+    good_lanes = filter_good_lanes(outputs, lanes)
 
     for lane in good_lanes:
         draw_lane(img, lane, 640, 360, color=(0, 255, 0))
