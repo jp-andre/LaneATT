@@ -66,11 +66,14 @@ def filter_good_lanes(lanes, tolerance=0.05):
     tolerance = 0.05
     start_positions = np.array([-1])
 
+    # Look for lanes that are distinct enough (more than 5% width apart)
+    # in the first few candidates (the highest probability of being lanes)
     for lane in lanes[0][:MAX_CANDIDATES]:
-        startx = lane.points[0, 0]
+        points = lane.points
+        startx = points[0, 0]
         diffs = np.abs(start_positions - startx) > tolerance
         if np.all(diffs):
-            print("Found new lane starting at", lane.points[0])
+            print("Found new lane starting at", points[0])
             good_lanes.append(lane)
             start_positions = np.append(start_positions, startx)
 
