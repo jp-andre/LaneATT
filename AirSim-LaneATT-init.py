@@ -1,11 +1,11 @@
 import os
 import sys
 import importlib
-from model_helpers.log import log_info
 
 # 1. Download pretrained weights
-pt_filename = "laneatt-weights.pt"
-cachefile = f"~/.cache/{pt_filename}"
+pt_filename = "model_0100.pt"
+homedir = os.environ["HOME"]
+cachefile = f"{homedir}/.cache/{pt_filename}"
 url = "https://collimator-devops-resources.s3.us-west-2.amazonaws.com/ml-demos/LaneATT/model_0100.pt"
 
 if not os.path.exists(cachefile):
@@ -15,8 +15,9 @@ if not os.path.exists(cachefile):
 os.system(f"ln -sf {cachefile} {pt_filename}")
 
 # 2. Prepare code for LaneATT
-os.system(f"unzip LaneATT.zip")
-os.system(f"pip install -r LaneATT.zip")
+# os.system("curl -o LaneATT-main.zip https://github.com/jp-andre/LaneATT/archive/refs/heads/main.zip")
+os.system("unzip -qo LaneATT-main.zip && mv LaneATT-main/* .")
+os.system("pip install -r requirements.txt")
 sys.path.append(".")
 importlib.invalidate_caches()
 
@@ -27,4 +28,4 @@ model, device = load_model(pt_filename)
 global shared_objects
 shared_objects = {}
 
-log_info(f"Initialization of LaneATT completed!")
+print(f"Initialization of LaneATT completed!")
