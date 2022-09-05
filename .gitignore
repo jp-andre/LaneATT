@@ -3,3 +3,4 @@ tensorboard
 **/models/*.pt
 build/
 datasets/
+/*.pt
